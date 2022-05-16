@@ -1,0 +1,86 @@
+/**
+	関数定義
+*/
+
+// 現在の時刻を求める
+const get_now = () => {
+	const date= new Date();
+	const year = date.getFullYear();
+	const month = date.getMonth();
+	const day = date.getDate();
+	const hour = date.getHours();
+	const minute = date.getMinutes();
+	const second = date.getSeconds();
+	const now = `${year}/${month}/${day} ${hour}:${minute}:${second}`;
+
+	return now;
+}
+
+
+/** 
+	main
+*/
+if (Java.available) {
+  Java.perform(function() {
+		Java.enumerateClassLoaders({
+			onMatch: function(loader){
+				Java.classFactory.loader = loader;
+				let com_j;
+
+				try{
+					com_j = Java.use("com.j");
+
+					// com.jクラスのqメソッドを上書きする
+					console.log("Start com.j.q implementation");
+					com_j.q.implementation = function(a) {
+						try {
+							// 現在の時刻を取得する
+							const now = get_now();
+							// pythonへ送るデータのフォーマットを整形
+							const sending_string = `******************time:${now}***********Inbound************************************ \n${a.x()} \n`;
+							// pythonへデータを送信する
+							send(sending_string);
+							return this.q(a);
+						}catch(error){
+							console.log(error);
+						}
+					}
+
+					// com.jクラスのrメソッドを上書きする
+					console.log("Start com.j.r implementation");
+					com_j.r.implementation = function(a) {
+						try {
+							let type_name = a.getClass().getSimpleName();
+							if (type_name == "Object[]") {
+								console.log("***Object[]です***");
+							}
+							if (type_name == "LinkedHashMap") {
+								console.log("ok");
+								const ret = this.r(a);
+								console.log("ok ok ok");
+
+								// 現在の時刻を取得する
+								const now = get_now();
+								// pythonへ送るデータのフォーマットを整形
+								const sending_string = `******************time:${now}***********Outbound************************************ \n${ret.x()} \n`;
+								// pythonへデータを送信する
+								send(sending_string);
+							}
+							return this.r(a);
+						}catch(error){
+							console.log(error);
+							const ret = this.r(a);
+							return ret;
+						}
+					}
+				}catch(error){
+					if(error.message.includes("ClassNotFoundException")){
+							console.log("\n ClassNotFoundException");
+					}
+				}
+			},
+			onComplete: function(){
+			}
+		});
+	})
+}
